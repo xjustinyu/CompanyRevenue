@@ -2,6 +2,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.TypeConversion;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Diagnostics;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
@@ -16,19 +17,19 @@ namespace WebApi.Controllers
     /// </summary>
     [ApiController]
     [Route("[controller]")]
-    public class CompanyDataController : ControllerBase
+    public class CompanyRevenueController : ControllerBase
     {
-        
+
         private readonly CompanyDataContext _companyDataContext;
-        
-        private readonly ILogger<CompanyDataController> _logger;
+
+        private readonly ILogger<CompanyRevenueController> _logger;
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="logger"></param>
-        /// <param name="companyDataContext">公司營收資料庫</param>
-        public CompanyDataController(ILogger<CompanyDataController> logger, CompanyDataContext companyDataContext)
+        /// <param name="companyDataContext">公司資料庫</param>
+        public CompanyRevenueController(ILogger<CompanyRevenueController> logger, CompanyDataContext companyDataContext)
         {
             _logger = logger;
             _companyDataContext = companyDataContext;
@@ -42,11 +43,13 @@ namespace WebApi.Controllers
         /// <param name="companyId">公司代號</param>
         /// <param name="companyName">公司名稱</param>
         /// <param name="companyType">產業別</param>
+        /// <param name="pageNumber">第幾頁</param>
+        /// <param name="pageSize">單頁筆數</param>
         /// <returns>公司營收查詢結果</returns>
         [Produces("application/json")]
         [ProducesResponseType(typeof(IEnumerable<CompanyRevenue>), 200)]
         [HttpGet(Name = "GetCompanyRevenue")]
-        public IEnumerable<CompanyRevenue> Get(int? reportDate = 0, int? dataMonth = 0, int? companyId = 0, string? companyName = "", string? companyType = "")
+        public IEnumerable<CompanyRevenue> Get(int? reportDate = 0, int? dataMonth = 0, int? companyId = 0, string? companyName = "", string? companyType = "", int pageNumber = 1, int pageSize = 50)
         {
             var companyRevenueList = _companyDataContext.CompanyRevenues.Where(c => c.Id > 0);
 
@@ -70,12 +73,17 @@ namespace WebApi.Controllers
                 companyRevenueList = companyRevenueList.Where(c => c.CompanyName.Contains(companyName));
             }
 
-            if (companyName != "")
+            if (companyType != "")
             {
                 companyRevenueList = companyRevenueList.Where(c => c.CompanyType.Contains(companyType));
             }
 
-            return companyRevenueList.OrderBy(c => c.Id).ToList();
+            var pageData = companyRevenueList
+                            .OrderBy(c => c.Id)
+                            .Skip((pageNumber - 1) * pageSize)
+                            .Take(pageSize)
+                            .ToList();
+            return pageData;
         }
 
         /// <summary>
@@ -90,7 +98,7 @@ namespace WebApi.Controllers
         {
             _companyDataContext.Add(companyRevenue);
             _companyDataContext.SaveChanges();
-            var result = _companyDataContext.CompanyRevenues.Where(c =>c.DataMonth == companyRevenue.DataMonth && c.CompanyId == companyRevenue.CompanyId).FirstOrDefault();
+            var result = _companyDataContext.CompanyRevenues.Where(c => c.DataMonth == companyRevenue.DataMonth && c.CompanyId == companyRevenue.CompanyId).FirstOrDefault();
 
             return result;
         }
@@ -194,7 +202,7 @@ namespace WebApi.Controllers
             }
         }
 
-        public class CustomDecimalConverter : CsvHelper.TypeConversion.DecimalConverter
+        private class CustomDecimalConverter : CsvHelper.TypeConversion.DecimalConverter
         {
             public override object ConvertFromString(string? text, IReaderRow row, MemberMapData memberMapData)
             {
