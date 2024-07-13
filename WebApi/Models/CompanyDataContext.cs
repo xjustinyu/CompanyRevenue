@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace WebApi.Models
 {
+#pragma warning disable CS1591
     public partial class CompanyDataContext : DbContext
     {
         public CompanyDataContext()
@@ -57,4 +58,6 @@ namespace WebApi.Models
 
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
     }
+#pragma warning restore CS1591
 }
+

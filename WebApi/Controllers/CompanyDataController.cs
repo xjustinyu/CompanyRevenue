@@ -1,14 +1,11 @@
+using AutoMapper;
 using CsvHelper;
 using CsvHelper.Configuration;
-using CsvHelper.TypeConversion;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Diagnostics;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 using WebApi.Models;
+using WebApi.ViewModels;
 
 namespace WebApi.Controllers
 {
@@ -24,15 +21,18 @@ namespace WebApi.Controllers
 
         private readonly ILogger<CompanyRevenueController> _logger;
 
+        private readonly IMapper _mapper;
+
         /// <summary>
         /// 
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="companyDataContext">公司資料庫</param>
-        public CompanyRevenueController(ILogger<CompanyRevenueController> logger, CompanyDataContext companyDataContext)
+        public CompanyRevenueController(ILogger<CompanyRevenueController> logger, CompanyDataContext companyDataContext, IMapper mapper)
         {
             _logger = logger;
             _companyDataContext = companyDataContext;
+            _mapper = mapper;
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace WebApi.Controllers
         [Produces("application/json")]
         [ProducesResponseType(typeof(IEnumerable<CompanyRevenue>), 200)]
         [HttpGet(Name = "GetCompanyRevenue")]
-        public IEnumerable<CompanyRevenue> Get(int? reportDate = 0, int? dataMonth = 0, int? companyId = 0, string? companyName = "", string? companyType = "", int pageNumber = 1, int pageSize = 50)
+        public IEnumerable<CompanyRevenueViewModel> Get(int? reportDate = 0, int? dataMonth = 0, int? companyId = 0, string? companyName = "", string? companyType = "", int pageNumber = 1, int pageSize = 50)
         {
             var companyRevenueList = _companyDataContext.CompanyRevenues.Where(c => c.Id > 0);
 
@@ -83,7 +83,9 @@ namespace WebApi.Controllers
                             .Skip((pageNumber - 1) * pageSize)
                             .Take(pageSize)
                             .ToList();
-            return pageData;
+
+            var companyRevenueViewModels = _mapper.Map<IEnumerable<CompanyRevenueViewModel>>(pageData);
+            return companyRevenueViewModels;
         }
 
         /// <summary>
@@ -100,6 +102,7 @@ namespace WebApi.Controllers
             _companyDataContext.SaveChanges();
             var result = _companyDataContext.CompanyRevenues.Where(c => c.DataMonth == companyRevenue.DataMonth && c.CompanyId == companyRevenue.CompanyId).FirstOrDefault();
 
+            var companyRevenueViewModels = _mapper.Map<CompanyRevenueViewModel>(result);
             return result;
         }
 
@@ -110,7 +113,7 @@ namespace WebApi.Controllers
         [Produces("application/json")]
         [ProducesResponseType(typeof(IEnumerable<CompanyRevenue>), 200)]
         [HttpPatch(Name = "PatchCompanyRevenue")]
-        public async Task<IEnumerable<CompanyRevenue>> Patch()
+        public async Task<IEnumerable<CompanyRevenueViewModel>> Patch()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             var encoding = Encoding.GetEncoding("BIG5");
@@ -179,7 +182,8 @@ namespace WebApi.Controllers
                 }
             }
 
-            return _companyDataContext.CompanyRevenues.ToList();
+            var companyRevenueViewModels = _mapper.Map<IEnumerable<CompanyRevenueViewModel>>(_companyDataContext.CompanyRevenues.ToList());
+            return companyRevenueViewModels;
         }
 
         sealed class CompanyRevenueMap : ClassMap<CompanyRevenue>
