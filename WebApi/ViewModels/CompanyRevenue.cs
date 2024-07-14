@@ -4,6 +4,22 @@ using System.Collections.Generic;
 namespace WebApi.ViewModels
 {
     /// <summary>
+    /// 查詢結果
+    /// </summary>
+    public class GetCompanyRevenueResponse
+    {
+        /// <summary>
+        /// 查詢資料總數
+        /// </summary>
+        public int TotalCount {  get; set; }
+
+        /// <summary>
+        /// CompanyRevenueViewModel List
+        /// </summary>
+        public List<CompanyRevenueViewModel>? CompanyRevenueList { get; set; }
+    }
+
+    /// <summary>
     /// 公司營收資料
     /// </summary>
     public class CompanyRevenueViewModel

@@ -1,26 +1,69 @@
 <script setup>
-    import { ref, onMounted } from 'vue'
+    import { ref, onMounted, watch, computed } from 'vue'
     import axios from 'axios'
 
     const companyRevenueList = ref([])
-    const allDataLoaded = ref(false)
-    let currentPage = 1
+    const totalCount = ref(0)
+    const pageSize = ref(50)
+    const currentPage = ref(1)
+    const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
+    let oldPageSize = pageSize.value
 
-    const loadMore = async () => {
-        const response = await axios.get(`https://localhost:7017/CompanyRevenue?pageNumber=${currentPage}&pageSize=50`)
-        if (response.data.length > 0) {
-            companyRevenueList.value.push(...response.data)
-            currentPage++
-        } else {
-            allDataLoaded.value = true
+    const getPageData = async () => {
+        const response = await axios.get(`https://localhost:7017/CompanyRevenue?pageNumber=${currentPage.value}&pageSize=${pageSize.value}`)
+        if (response.data.companyRevenueList.length > 0) {
+            companyRevenueList.value = [...response.data.companyRevenueList]
+            totalCount.value = response.data.totalCount
         }
     }
 
-    onMounted(loadMore)
+    const nextPage = () => {
+        if (currentPage.value * pageSize.value < totalCount.value) {
+            currentPage.value++
+        }
+    }
+
+    const prevPage = () => {
+        if (currentPage.value > 1) {
+            currentPage.value--
+        }
+    }
+
+    watch([currentPage, pageSize], () => {
+        //當前頁數 > 最大頁數
+        if (currentPage.value > totalPages.value) {
+            currentPage.value = totalPages.value
+        }
+
+        //單頁筆數 > 總筆數
+        if (pageSize.value >= totalCount.value) {
+            pageSize.value = totalCount.value
+        }
+
+        //單頁筆數有變動時修改當前頁數為1
+        if (pageSize.value !== oldPageSize) {
+            currentPage.value = 1
+            oldPageSize = pageSize.value
+        }
+
+        getPageData()
+    })
+
+    onMounted(getPageData)
 </script>
 
 <template>
     <div class="company-revenue-list">
+        <div>
+            總數: {{ totalCount }}
+            單頁筆數: <input type="number" min="1" :max="totalCount" v-model.number="pageSize" />
+            總頁數: {{totalPages}}
+        </div>
+        <div>
+            <button @click="prevPage" :disabled="currentPage === 1">←</button>
+            當前頁數: <input type="number" min="1" :max="Math.ceil(totalCount / pageSize)" v-model.number="currentPage" />
+            <button @click="nextPage" :disabled="currentPage * pageSize >= totalCount">→</button>
+        </div>
         <table class="table">
             <thead>
                 <tr>
@@ -58,7 +101,7 @@
                 </tr>
             </tbody>
         </table>
-        <button @click="loadMore" v-if="!allDataLoaded">載入更多</button>
+        <!--<button @click="loadMore" v-if="!allDataLoaded">載入更多</button>-->
     </div>
 </template>
 
@@ -68,17 +111,24 @@
     }
 
     .table {
-        width: auto;
+        width: 100%;
         border-collapse: collapse;
-        table-layout: auto;        
+        table-layout: auto;
     }
 
-        .table th,
+        .table th {
+            border: 1px solid #ccc;
+            font-size: 1vw;
+            background-color: white;
+            position: sticky;
+            top: 0;
+        }
         .table td {
             padding: 8px;
             border: 1px solid #ccc;
             text-align: center;
-            white-space: nowrap; 
-            word-break: break-word; 
+            white-space: nowrap;
+            word-break: break-word;
+            font-size: 1.2vw;
         }
 </style>

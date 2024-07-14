@@ -24,10 +24,11 @@ namespace WebApi.Controllers
         private readonly IMapper _mapper;
 
         /// <summary>
-        /// 
+        /// CompanyRevenueController constructor
         /// </summary>
         /// <param name="logger"></param>
-        /// <param name="companyDataContext">公司資料庫</param>
+        /// <param name="companyDataContext">公司營收資料庫</param>
+        /// <param name="mapper">AutoMapper</param>
         public CompanyRevenueController(ILogger<CompanyRevenueController> logger, CompanyDataContext companyDataContext, IMapper mapper)
         {
             _logger = logger;
@@ -47,9 +48,9 @@ namespace WebApi.Controllers
         /// <param name="pageSize">單頁筆數</param>
         /// <returns>公司營收查詢結果</returns>
         [Produces("application/json")]
-        [ProducesResponseType(typeof(IEnumerable<CompanyRevenue>), 200)]
+        [ProducesResponseType(typeof(GetCompanyRevenueResponse), 200)]
         [HttpGet(Name = "GetCompanyRevenue")]
-        public IEnumerable<CompanyRevenueViewModel> Get(int? reportDate = 0, int? dataMonth = 0, int? companyId = 0, string? companyName = "", string? companyType = "", int pageNumber = 1, int pageSize = 50)
+        public GetCompanyRevenueResponse Get(int? reportDate = 0, int? dataMonth = 0, int? companyId = 0, string? companyName = "", string? companyType = "", int pageNumber = 1, int pageSize = 50)
         {
             var companyRevenueList = _companyDataContext.CompanyRevenues.Where(c => c.Id > 0);
 
@@ -78,14 +79,16 @@ namespace WebApi.Controllers
                 companyRevenueList = companyRevenueList.Where(c => c.CompanyType.Contains(companyType));
             }
 
+            var totalCount = companyRevenueList.Count();
+
             var pageData = companyRevenueList
                             .OrderBy(c => c.Id)
                             .Skip((pageNumber - 1) * pageSize)
                             .Take(pageSize)
                             .ToList();
 
-            var companyRevenueViewModels = _mapper.Map<IEnumerable<CompanyRevenueViewModel>>(pageData);
-            return companyRevenueViewModels;
+            var revenueData = _mapper.Map<IEnumerable<CompanyRevenueViewModel>>(pageData).ToList();
+            return new GetCompanyRevenueResponse { TotalCount = totalCount, CompanyRevenueList = revenueData };
         }
 
         /// <summary>
